@@ -45,6 +45,7 @@ target_include_directories(platform_s
         ${NRF_FOLDER_PATH}/nrfx/drivers/include
         ${NRF_FOLDER_PATH}/common
         ${PLATFORM_DIR}/..
+        services/include
 )
 
 target_sources(platform_s
@@ -65,6 +66,19 @@ target_sources(platform_s
     PUBLIC
         plat_test.c
 )
+
+if(TFM_PARTITION_PLATFORM)
+    target_sources(platform_s
+        PRIVATE
+            services/src/tfm_platform_hal_ioctl.c
+            services/src/tfm_ioctl_core_s_api.c
+    )
+
+    target_sources(platform_ns
+        PRIVATE
+            services/src/tfm_ioctl_core_ns_api.c
+    )
+endif()
 
 if(SECURE_UART1)
     target_sources(platform_s
@@ -93,6 +107,7 @@ target_include_directories(platform_ns
         ${NRF_FOLDER_PATH}/nrfx/mdk
         ${NRF_FOLDER_PATH}/nrfx/drivers/include
         ${PLATFORM_DIR}/..
+        services/include
     PRIVATE
         ${PLATFORM_DIR}/../interface/include
 )
@@ -133,4 +148,10 @@ if(BL2)
             ${NRF_FOLDER_PATH}/nrfx/drivers/src/nrfx_qspi.c
             ${NRF_FOLDER_PATH}/nrfx_glue.c
     )
+endif()
+
+if (TFM_PARTITION_PLATFORM)
+install(FILES       services/include/tfm_ioctl_core_api.h
+        DESTINATION ${TFM_INSTALL_PATH}/interface/include)
+
 endif()
