@@ -144,6 +144,8 @@ struct tfm_conn_handle_t *tfm_spm_create_conn_handle(struct service_t *service,
         return NULL;
     }
 
+    spm_memset(p_handle, 0, sizeof(*p_handle));
+
     p_handle->internal_msg.service = service;
     p_handle->status = TFM_HANDLE_STATUS_IDLE;
     p_handle->client_id = client_id;
@@ -546,7 +548,7 @@ int32_t tfm_memory_check(const void *buffer, size_t len, bool ns_caller,
 
 bool tfm_spm_is_ns_caller(void)
 {
-#if defined(TFM_MULTI_CORE_TOPOLOGY) || defined(FORWARD_PROT_MSG)
+#if defined(TFM_MULTI_CORE_TOPOLOGY)
     /* Multi-core NS PSA API request is processed by pendSV. */
     return (__get_active_exc_num() == EXC_NUM_PENDSV);
 #else
