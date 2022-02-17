@@ -30,11 +30,30 @@ MEMORY
   CODE_RAM (rwx) : ORIGIN = S_CODE_SRAM_ALIAS_BASE, LENGTH = TOTAL_CODE_SRAM_SIZE
 #endif
 
+#ifndef TFM_MULTI_CORE_TOPOLOGY
+//  VENEERS  (rx)  : ORIGIN = CMSE_VENEER_REGION_START, LENGTH = CMSE_VENEER_REGION_SIZE
+#endif
+
 #if defined(PSA_PROXY_SHARED_MEMORY_BASE)
   PSA_PROXY_SHARED_MEMORY_RAM (rw) : ORIGIN = PSA_PROXY_SHARED_MEMORY_BASE, LENGTH = PSA_PROXY_SHARED_MEMORY_SIZE
 #endif
 
 }
+
+#define VENEER_POS 3
+
+; // #define SPU_FLASH_REGION_SIZE   (0x00008000) nrf91
+#define SPU_FLASH_REGION_SIZE   (0x00004000)
+
+#define CMSE_VENEER_REGION_SIZE     (0x400)
+/* The Nordic IDAU has different alignment requirements than the ARM SAU, so
+ * these override the default start and end alignments. */
+#define CMSE_VENEER_REGION_START_ALIGN \
+            (ALIGN(SPU_FLASH_REGION_SIZE) - CMSE_VENEER_REGION_SIZE + \
+                (. > (ALIGN(SPU_FLASH_REGION_SIZE) - CMSE_VENEER_REGION_SIZE) \
+                    ? SPU_FLASH_REGION_SIZE : 0))
+#define CMSE_VENEER_REGION_END_ALIGN (ALIGN(SPU_FLASH_REGION_SIZE))
+
 
 __heap_size__  = S_HEAP_SIZE;
 #if !defined(TFM_PSA_API)
@@ -47,6 +66,54 @@ GROUP(libgcc.a libc.a libm.a libnosys.a libc_nano.a)
 
 ENTRY(Reset_Handler)
 
+#ifdef TFM_MULTI_CORE_TOPOLOGY
+#define VENEERS()
+#else
+#if 1
+#define VENEERS() \
+    /* \
+     * We need a dummy section to "reset" the location counter to FLASH if the \
+     * previous section was > RAM. Not sure why. This avoids the error \
+     * "ERROR: CMSE stub ... too far ... from destination" Make a dummy  \
+     * assignment so the section is not optimized away. \
+     */ \
+    .sg_start_dummy : ALIGN(4) \
+    { \
+        SG_START_DUMMY_UNUSED = .; \
+    } > FLASH \
+    /* \
+     * Place the CMSE Veneers (containing the SG instructions) in a correctly \
+     * aligned region so that the SAU can programmed to just set this region as \
+     * Non-Secure Callable. \
+     */ \
+    .gnu.sgstubs CMSE_VENEER_REGION_START_ALIGN : \
+    { \
+        Load$$LR$$LR_VENEER$$Base = ABSOLUTE(.); \
+        *(.gnu.sgstubs*) \
+    } > FLASH \
+ \
+    /* \
+     * This is needed because the linker seems to place the veneers *after* the \
+     * .gnu.sgstubs output section, so any end alignment applied inside it are \
+     * placed before the veneers instead of after. Also, the end alignment seems \
+     * to be ignored if not done in an output section, so this cannot be placed \
+     * by itself after the .gnu.sgstubs section. \
+     */ \
+    .sg_end_dummy : ALIGN(32) \
+    { \
+        . = CMSE_VENEER_REGION_END_ALIGN; \
+        Load$$LR$$LR_VENEER$$Limit = ABSOLUTE(.); \
+    } > FLASH \
+ \
+    ASSERT ((Load$$LR$$LR_VENEER$$Limit - Load$$LR$$LR_VENEER$$Base) \
+            <= CMSE_VENEER_REGION_SIZE, "Veneer region overflowed") \
+    Image$$ER_VENEER$$Base = ADDR(.gnu.sgstubs); \
+    Image$$VENEER_ALIGN$$Limit = ADDR(.gnu.sgstubs) + SIZEOF(.gnu.sgstubs);
+#endif
+
+
+#endif
+
 SECTIONS
 {
     .TFM_VECTORS : ALIGN(4)
@@ -55,7 +122,7 @@ SECTIONS
         KEEP(*(.vectors))
         __vectors_end__ = .;
     } > FLASH
-
+#if 0
 #ifndef TFM_MULTI_CORE_TOPOLOGY
     ASSERT(. <= ADDR(.TFM_VECTORS) + S_CODE_VECTOR_TABLE_SIZE, ".TFM_VECTORS section size overflow.")
     . = ADDR(.TFM_VECTORS) + S_CODE_VECTOR_TABLE_SIZE;
@@ -72,7 +139,7 @@ SECTIONS
     Image$$ER_VENEER$$Base = ADDR(.gnu.sgstubs);
     Image$$VENEER_ALIGN$$Limit = ADDR(.gnu.sgstubs) + SIZEOF(.gnu.sgstubs);
 #endif
-
+#endif
     .copy.table : ALIGN(4)
     {
         __copy_table_start__ = .;
@@ -220,6 +287,27 @@ SECTIONS
         *libplatform_s*:*(.rodata*)
         *libtfm_spm*:*(.rodata*)
     } > FLASH
+
+#ifndef TFM_MULTI_CORE_TOPOLOGY
+#if 0
+    /*
+     * Place the CMSE Veneers (containing the SG instruction) after the code, in a
+     * separate 32 bytes aligned region so that the SAU can programmed to just set
+     * this region as Non-Secure Callable.
+     */
+    .gnu.sgstubs CMSE_VENEER_REGION_START_ALIGN : //CMSE_VENEER_REGION_START_ALIGN
+    {
+        *(.gnu.sgstubs*)
+        . = CMSE_VENEER_REGION_END_ALIGN;
+    //} > VENEERS AT> VENEERS
+    } > FLASH
+//    Load$$LR$$LR_VENEER$$Base = ADDR(.gnu.sgstubs);
+//    Load$$LR$$LR_VENEER$$Limit = ADDR(.gnu.sgstubs) + SIZEOF(.gnu.sgstubs);
+    Image$$ER_VENEER$$Base = ADDR(.gnu.sgstubs);
+    Image$$VENEER_ALIGN$$Limit = ADDR(.gnu.sgstubs) + SIZEOF(.gnu.sgstubs);
+#endif
+#endif
+
 
     /**** Base address of secure data area */
     .tfm_secure_data_start :
@@ -558,11 +646,35 @@ SECTIONS
     } > RAM AT> FLASH
 #endif
 
+#if VENEER_POS == 3
+VENEERS()
+#endif
+#if 0
+#ifndef TFM_MULTI_CORE_TOPOLOGY
+    /*
+     * Place the CMSE Veneers (containing the SG instruction) after the code, in a
+     * separate 32 bytes aligned region so that the SAU can programmed to just set
+     * this region as Non-Secure Callable.
+     */
+    .gnu.sgstubs CMSE_VENEER_REGION_START_ALIGN : //CMSE_VENEER_REGION_START_ALIGN
+    {
+        *(.gnu.sgstubs*)
+        . = CMSE_VENEER_REGION_END_ALIGN;
+    //} > VENEERS AT> VENEERS
+    } > FLASH AT > FLASH 
+    Load$$LR$$LR_VENEER$$Base = ADDR(.gnu.sgstubs);
+    Load$$LR$$LR_VENEER$$Limit = ADDR(.gnu.sgstubs) + SIZEOF(.gnu.sgstubs);
+#endif
+#endif
     Load$$LR$$LR_NS_PARTITION$$Base = NS_PARTITION_START;
 
 #ifdef BL2
     Load$$LR$$LR_SECONDARY_PARTITION$$Base = SECONDARY_PARTITION_START;
 #endif /* BL2 */
+
+#ifdef NS_STORAGE
+    Load$$LR$$LR_NRF_NS_STORAGE_PARTITION$$Base = NS_STORAGE_PARTITION_START;
+#endif /* NS_STORAGE */
 
     PROVIDE(__stack = Image$$ARM_LIB_STACK$$ZI$$Limit);
 }

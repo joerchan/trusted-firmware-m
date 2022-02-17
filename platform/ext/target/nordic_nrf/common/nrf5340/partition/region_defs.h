@@ -36,6 +36,12 @@
 #define SPU_FLASH_REGION_SIZE   (0x00004000)
 #define SPU_SRAM_REGION_SIZE    (0x00002000)
 
+/* Size of vector table: 146 interrupt handlers + 4 bytes MPS initial value */
+// #define S_CODE_VECTOR_TABLE_SIZE    (0x24C)
+
+/* Size of vector table: 84 interrupt handlels + 4 bytes MPS initial value */
+#define S_CODE_VECTOR_TABLE_SIZE    (0x154)
+
 /* This size of buffer is big enough to store an attestation
  * token produced by initial attestation service
  */
@@ -110,20 +116,7 @@
 #define S_DATA_SIZE     (TOTAL_RAM_SIZE / 2)
 #define S_DATA_LIMIT    (S_DATA_START + S_DATA_SIZE - 1)
 
-/* The CMSE veneers shall be placed in an NSC region
- * which will be placed in a secure SPU region with the given alignment.
- */
-#define CMSE_VENEER_REGION_SIZE     (0x400)
-/* The Nordic IDAU has different alignment requirements than the ARM SAU, so
- * these override the default start and end alignments. */
-#define CMSE_VENEER_REGION_START_ALIGN \
-            (ALIGN(SPU_FLASH_REGION_SIZE) - CMSE_VENEER_REGION_SIZE + \
-                (. > (ALIGN(SPU_FLASH_REGION_SIZE) - CMSE_VENEER_REGION_SIZE) \
-                    ? SPU_FLASH_REGION_SIZE : 0))
-#define CMSE_VENEER_REGION_END_ALIGN (ALIGN(SPU_FLASH_REGION_SIZE))
-/* We want the veneers placed in the secure code so it isn't placed at the very
- * end. When placed in code, we don't need an absolute start address. */
-#define CMSE_VENEER_REGION_IN_CODE
+#define CMSE_VENEER_REGION_START  (S_CODE_LIMIT + 1)
 
 /* Non-secure regions */
 #define NS_IMAGE_PRIMARY_AREA_OFFSET \
