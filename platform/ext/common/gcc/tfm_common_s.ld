@@ -53,9 +53,17 @@ SECTIONS
         KEEP(*(.vectors))
         . = ALIGN(4);
         __vectors_end__ = .;
+#if defined(NULL_POINTER_EXCEPTION_DETECTION) && S_CODE_START == 0
+        /* If this image is placed at the beginning of flash make sure we
+         * don't put any code in the first 256 bytes of flash as that area might
+         * be used for null-pointer dereference detection. It is believed that on
+         * nordic platforms the __Vectors_Size will always be greater than 256,
+         * but we (potentially) adjust the location pointer anyway just to be safe. */
+        . = MAX(., 256);
+#endif
     } > FLASH
 
-#ifdef CONFIG_TFM_USE_TRUSTZONE
+#if defined(CONFIG_TFM_USE_TRUSTZONE) && !CONFIG_TFM_USE_NRF_SPU
     ASSERT(. <= ADDR(.TFM_VECTORS) + S_CODE_VECTOR_TABLE_SIZE, ".TFM_VECTORS section size overflow.")
     . = ADDR(.TFM_VECTORS) + S_CODE_VECTOR_TABLE_SIZE;
     /*
@@ -502,6 +510,45 @@ SECTIONS
     } > RAM AT> FLASH
 
     ASSERT(S_RAM_CODE_START % 4 == 0, "S_RAM_CODE_START must be divisible by 4")
+#endif
+
+#if defined(CONFIG_TFM_USE_TRUSTZONE) && defined(CONFIG_TFM_USE_NRF_SPU)
+    /*
+     * We need a dummy section to "reset" the location counter to FLASH if the
+     * previous section was > RAM. Not sure why. This avoids the error
+     * "ERROR: CMSE stub ... too far ... from destination" Make a dummy
+     * assignment so the section is not optimized away.
+     */
+    .sg_start_dummy : ALIGN(4)
+    {
+        SG_START_DUMMY_UNUSED = .;
+    } > FLASH
+    /*
+     * Place the CMSE Veneers (containing the SG instructions) in a correctly
+     * aligned region so that the SAU can programmed to just set this region as
+     * Non-Secure Callable.
+     */
+    .gnu.sgstubs CMSE_VENEER_REGION_START_ALIGN :
+    {
+        Load$$LR$$LR_VENEER$$Base = ABSOLUTE(.);
+        *(.gnu.sgstubs*)
+    } > FLASH
+
+    /*
+     * This is needed because the linker seems to place the veneers *after* the
+     * .gnu.sgstubs output section, so any end alignment applied inside it are
+     * placed before the veneers instead of after. Also, the end alignment seems
+     * to be ignored if not done in an output section, so this cannot be placed
+     * by itself after the .gnu.sgstubs section.
+     */
+    .sg_end_dummy : ALIGN(32)
+    {
+        . = CMSE_VENEER_REGION_END_ALIGN;
+        Load$$LR$$LR_VENEER$$Limit = ABSOLUTE(.);
+    } > FLASH
+
+    ASSERT ((Load$$LR$$LR_VENEER$$Limit - Load$$LR$$LR_VENEER$$Base)
+            <= CMSE_VENEER_REGION_SIZE, "Veneer region overflowed")
 #endif
 
     Load$$LR$$LR_NS_PARTITION$$Base = NS_PARTITION_START;
