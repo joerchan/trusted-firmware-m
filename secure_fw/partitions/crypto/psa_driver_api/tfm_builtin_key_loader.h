@@ -81,7 +81,7 @@ psa_status_t tfm_builtin_key_loader_init(void);
  * \return Returns error code specified in \ref psa_status_t
  */
 psa_status_t tfm_builtin_key_loader_get_key_buffer_size(
-        mbedtls_svc_key_id_t key_id, size_t *len);
+        psa_key_id_t key_id, size_t *len);
 
 /**
  * \brief Returns the attributes and key material of a key from the builtin

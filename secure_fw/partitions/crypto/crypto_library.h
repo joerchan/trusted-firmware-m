@@ -41,7 +41,7 @@ extern "C" {
  * \brief The following typedef must be defined to the type associated to the key_id in the underlying library
  *
  */
-typedef mbedtls_svc_key_id_t tfm_crypto_library_key_id_t;
+typedef psa_key_id_t tfm_crypto_library_key_id_t;
 
 /**
  * \brief Function used to initialise an object of \ref tfm_crypto_library_key_id_t to a (owner, key_id) pair

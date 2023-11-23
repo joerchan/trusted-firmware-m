@@ -2415,7 +2415,7 @@
  * \param unused  Unused parameter.
  * \param key_id  Identifier of the key.
  */
-static inline mbedtls_svc_key_id_t mbedtls_svc_key_id_make(
+static inline psa_key_id_t mbedtls_svc_key_id_make(
     unsigned int unused, psa_key_id_t key_id)
 {
     (void) unused;
@@ -2430,8 +2430,8 @@ static inline mbedtls_svc_key_id_t mbedtls_svc_key_id_make(
  *
  * \return Non-zero if the two key identifier are equal, zero otherwise.
  */
-static inline int mbedtls_svc_key_id_equal(mbedtls_svc_key_id_t id1,
-                                           mbedtls_svc_key_id_t id2)
+static inline int mbedtls_svc_key_id_equal(psa_key_id_t id1,
+                                           psa_key_id_t id2)
 {
     return id1 == id2;
 }
@@ -2442,14 +2442,14 @@ static inline int mbedtls_svc_key_id_equal(mbedtls_svc_key_id_t id1,
  *
  * \return Non-zero if the key identifier is null, zero otherwise.
  */
-static inline int mbedtls_svc_key_id_is_null(mbedtls_svc_key_id_t key)
+static inline int mbedtls_svc_key_id_is_null(psa_key_id_t key)
 {
     return key == 0;
 }
 
 #else /* MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER */
 #include "mbedtls/private_access.h"
-#define MBEDTLS_SVC_KEY_ID_INIT ((mbedtls_svc_key_id_t){ 0, 0 })
+#define MBEDTLS_SVC_KEY_ID_INIT ((psa_key_id_t){ 0, 0 })
 #define MBEDTLS_SVC_KEY_ID_GET_KEY_ID(id) ((id).MBEDTLS_PRIVATE(key_id))
 #define MBEDTLS_SVC_KEY_ID_GET_OWNER_ID(id) ((id).MBEDTLS_PRIVATE(owner))
 
@@ -2458,10 +2458,10 @@ static inline int mbedtls_svc_key_id_is_null(mbedtls_svc_key_id_t key)
  * \param owner_id Identifier of the key owner.
  * \param key_id   Identifier of the key.
  */
-static inline mbedtls_svc_key_id_t mbedtls_svc_key_id_make(
+static inline psa_key_id_t mbedtls_svc_key_id_make(
     mbedtls_key_owner_id_t owner_id, psa_key_id_t key_id)
 {
-    return (mbedtls_svc_key_id_t){ .MBEDTLS_PRIVATE(key_id) = key_id,
+    return (psa_key_id_t){ .MBEDTLS_PRIVATE(key_id) = key_id,
                                    .MBEDTLS_PRIVATE(owner) = owner_id };
 }
 
@@ -2472,8 +2472,8 @@ static inline mbedtls_svc_key_id_t mbedtls_svc_key_id_make(
  *
  * \return Non-zero if the two key identifier are equal, zero otherwise.
  */
-static inline int mbedtls_svc_key_id_equal(mbedtls_svc_key_id_t id1,
-                                           mbedtls_svc_key_id_t id2)
+static inline int mbedtls_svc_key_id_equal(psa_key_id_t id1,
+                                           psa_key_id_t id2)
 {
     return (id1.MBEDTLS_PRIVATE(key_id) == id2.MBEDTLS_PRIVATE(key_id)) &&
            mbedtls_key_owner_id_equal(id1.MBEDTLS_PRIVATE(owner), id2.MBEDTLS_PRIVATE(owner));
@@ -2485,7 +2485,7 @@ static inline int mbedtls_svc_key_id_equal(mbedtls_svc_key_id_t id1,
  *
  * \return Non-zero if the key identifier is null, zero otherwise.
  */
-static inline int mbedtls_svc_key_id_is_null(mbedtls_svc_key_id_t key)
+static inline int mbedtls_svc_key_id_is_null(psa_key_id_t key)
 {
     return key.MBEDTLS_PRIVATE(key_id) == 0;
 }

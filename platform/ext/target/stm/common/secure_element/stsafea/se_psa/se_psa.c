@@ -113,7 +113,7 @@ psa_status_t se_st_to_psa_error(int32_t  ret)
   * @retval  #PSA_SUCCESS
   *          A key slot is created.
   */
-static psa_status_t register_key_in_all_domain(mbedtls_svc_key_id_t key,
+static psa_status_t register_key_in_all_domain(psa_key_id_t key,
                                                psa_key_attributes_t *attr) {
   psa_status_t psa_status = PSA_ERROR_GENERIC_ERROR;
   
@@ -162,7 +162,7 @@ exit:
 static psa_status_t register_function_key(psa_key_id_t key_id,
                                           psa_key_attributes_t *attr)
 {
-    mbedtls_svc_key_id_t mbedtls_id = {0,tfm_nspm_get_current_client_id()};
+    psa_key_id_t mbedtls_id = {0,tfm_nspm_get_current_client_id()};
     /* attribute for function keys */
     psa_set_key_bits(attr, 8); /* logical asset */
     psa_set_key_lifetime(attr, PSA_SE_ST_LIFETIME_READ_ONLY);
@@ -203,7 +203,7 @@ static psa_status_t register_se_keys(void)
 
     /* check if keys are present */
 #ifdef TOP_CHECK_KEY
-    mbedtls_svc_key_id_t key_id = {0,tfm_nspm_get_current_client_id()};
+    psa_key_id_t key_id = {0,tfm_nspm_get_current_client_id()};
     psa_key_handle_t key_handle;
 
     key_id.MBEDTLS_PRIVATE(key_id) = SE_ST_ID_TO_PSA_ID(SE_ST_SERIAL_NUMBER);

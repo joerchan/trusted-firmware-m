@@ -26,11 +26,11 @@ extern "C" {
 
 /*
  * To support both openless APIs and psa_open_key() temporarily, define
- * psa_key_handle_t to be equal to mbedtls_svc_key_id_t. Do not mark the
+ * psa_key_handle_t to be equal to psa_key_id_t. Do not mark the
  * type and its utility macros and functions deprecated yet. This will be done
  * in a subsequent phase.
  */
-typedef mbedtls_svc_key_id_t psa_key_handle_t;
+typedef psa_key_id_t psa_key_handle_t;
 
 #define PSA_KEY_HANDLE_INIT MBEDTLS_SVC_KEY_ID_INIT
 
@@ -105,7 +105,7 @@ static inline int psa_key_handle_is_null(psa_key_handle_t handle)
  *         It is implementation-dependent whether a failure to initialize
  *         results in this error code.
  */
-psa_status_t psa_open_key(mbedtls_svc_key_id_t key,
+psa_status_t psa_open_key(psa_key_id_t key,
                           psa_key_handle_t *handle);
 
 /** Close a key handle.
